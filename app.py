@@ -50,6 +50,13 @@ class ReadWorksheetDataRequest(BaseModel):
     spreadsheet_id: str
     sheet_name: str
 
+class ContentPlanRowData(BaseModel):
+    spreadsheet_id: str
+    sheet_name: str
+    headline: str
+    short_description: str
+    tags: str
+
 
 # Function to create a Google Drive folder
 def create_folder(folder_name):
@@ -297,7 +304,7 @@ def find_empty_row(spreadsheet_id, sheet_name):
         if all(cell == "" for cell in row):
             return i + 6  # Return the row number (6-based index)
     return None
-    
+
 @app.post("/add_content_plan_row/")
 async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
     # Spreadsheet ID and Sheet name 
