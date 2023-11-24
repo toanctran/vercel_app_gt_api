@@ -171,38 +171,6 @@ def find_files_by_keyword(keyword):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# @app.post("/create_google_sheet")
-# async def create_google_sheet(request_body: CreateGoogleSheetRequest):
-  
-#   # Example: Create a new spreadsheet by copying an existing one
-#   # source_spreadsheet_id = '112hu6Mp1YqL3h7_GUSMzj42LtrABy7glxV5w3qW7UWU'
-#   source_spreadsheet_id = request_body.source_spreadsheet_id
-#   new_spreadsheet_title = request_body.new_spreadsheet_title
-#   permissions_email = request_body.permissions_email
-#   folder_id = request_body.folder_id  # Destination folder ID
-#   try:
-#       # Retrieve the metadata of the source file
-#       source_file = drive_service.files().get(fileId=source_spreadsheet_id).execute()
-      
-#       # Create a copy of the source file
-#       copied_file = {'name': new_spreadsheet_title}
-#       new_file = drive_service.files().copy(
-#           fileId=source_spreadsheet_id,
-#           body=copied_file
-#       ).execute()
-#       new_file_id = new_file['id']
-#       permissions = {
-#           'type': 'user',
-#           'role': 'writer',  # Change to 'reader' if you only need read access
-#           'emailAddress': permissions_email,  # Replace with the email address of the user you want to grant access to
-#       }
-#       drive_service.permissions().create(fileId=new_file_id, body=permissions).execute()
-
-#       print(f"Success! New file created:  https://docs.google.com/spreadsheets/d/{new_file_id}")
-#       return f"https://docs.google.com/spreadsheets/d/{new_file_id}"
-  
-#   except Exception as e:
-#       return str(e)
 
 # Endpoint to create a Google Sheet with copy and permissions
 @app.post("/create_google_sheet/", response_model=dict)
