@@ -289,5 +289,56 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
         return {"error": str(e)}
 
 
+# Function to find the first empty row in columns C to E starting from row 6
+def find_empty_row(spreadsheet_id, sheet_name):
+    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:E").execute()
+    data = values.get("values", [])
+    for i, row in enumerate(data):
+        if all(cell == "" for cell in row):
+            return i + 6  # Return the row number (6-based index)
+    return None
+    
+@app.post("/add_content_plan_row/")
+async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
+    # Spreadsheet ID and Sheet name 
+    spreadsheet_id = request_body.spreadsheet_id
+    sheet_name = request_body.sheet_name # Replace with your Google Sheet ID
+
+
+    # Prepare the data for the new row
+    new_row_data = [[request_body.headline, request_body.short_description, request_body.tags]]
+
+
+    try:
+        # Find the first empty row in columns C to E starting from row 6
+        empty_row = find_empty_row(spreadsheet_id,sheet_name)
+
+        if empty_row is not None:
+            # If an empty row is found, update it
+            range_name = f"{sheet_name}!C{empty_row}:E{empty_row}"
+        else:
+            # If no empty row is found, add a new row
+            empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
+            range_name = f"{sheet_name}!C{empty_row}:E{empty_row}"
+
+        # Prepare the request body to add a new row or update the existing row
+        request_body = {
+            "values": new_row_data
+        }
+
+        # Make the API request to update or add the row
+        response = spreadsheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption="RAW",
+            body=request_body
+        ).execute()
+
+        return {"message": f"Row {empty_row} updated/added successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 
