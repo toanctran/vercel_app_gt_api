@@ -282,8 +282,10 @@ def read_worksheet_data_endpoint(request_body: ReadWorksheetDataRequest):
     speadsheet = gc.open_by_key(spreadsheet_id)
     worksheet = spreadsheet.worksheet(sheet_name)
     rows = worksheet.get_all_values()
-    
-    return {"row data" : rows}
+    if rows:
+        return {"row data" : rows}
+    else:
+        return{'resuklt': "cannot find any rows"}
 
 
 
