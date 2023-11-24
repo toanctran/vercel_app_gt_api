@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from typing import List
 from fastapi import FastAPI, HTTPException, Body, Query
 import io
-from dotenv import load_dotenv
-load_dotenv()
 import json
 # Create a service object to interact with the Drive API
 print(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
@@ -288,21 +286,21 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
         return {"error": str(e)}
 
 
-if __name__ == "__main__":
-    import uvicorn
-    import json
-    from fastapi.openapi.utils import get_openapi
-    with open('openapi_gg_text.json', 'w') as f:
-      json.dump(get_openapi(
-          title="Vercel App Warper for GG API",
-          version="1.0.0",
-          summary="This is the warper loader using FastAPI and Vercel",
-          openapi_version=app.openapi_version,
-          description="Use this to create, read and update GG SpreadSheet using GG Sheet and GG Drive API",
-          routes=app.routes,
-          servers=[{"url" : "https://vercel-app-gg-api.vercel.app"}]
-      ), f)
+# if __name__ == "__main__":
+#     import uvicorn
+#     import json
+#     from fastapi.openapi.utils import get_openapi
+#     with open('openapi_gg_text.json', 'w') as f:
+#       json.dump(get_openapi(
+#           title="Vercel App Warper for GG API",
+#           version="1.0.0",
+#           summary="This is the warper loader using FastAPI and Vercel",
+#           openapi_version=app.openapi_version,
+#           description="Use this to create, read and update GG SpreadSheet using GG Sheet and GG Drive API",
+#           routes=app.routes,
+#           servers=[{"url" : "https://vercel-app-gg-api.vercel.app"}]
+#       ), f)
 
 
-    # Run the FastAPI app using UVicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+#     # Run the FastAPI app using UVicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
