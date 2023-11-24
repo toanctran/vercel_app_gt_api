@@ -20,7 +20,7 @@ spreadsheet_service = build('sheets', 'v4', credentials=creds)
 app = FastAPI()
 @app.get("/")
 async def root():
-  return{"message":"hello world"}
+  return{"message":"Created by Tran Chi Toan - chitoantran@gmail.com"}
 # Pydantic model for GG sheet creation request
 class CreateGoogleSheetRequest(BaseModel):
     new_spreadsheet_title: str
@@ -271,7 +271,7 @@ def get_sheet_names(request_body: GetSheetNamesRequest):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/read_worksheet_data", response_model=list)
+@app.get("/read_worksheet_data", response_model=list[list])
 def read_worksheet_data(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
