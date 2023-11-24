@@ -259,7 +259,7 @@ def find_files_by_keyword_endpoint(keyword: str = Query(..., description="Keywor
     else:
         raise HTTPException(status_code=404, detail=f"No files found in Google Drive matching the keyword '{keyword}'")
     
-@app.post("/get_sheet_names", response_model=list[str])
+@app.get("/get_sheet_names", response_model=list[str])
 def get_sheet_names(request_body: GetSheetNamesRequest):
     spreadsheet_id = request_body.spreadsheet_id
     try:
@@ -291,23 +291,3 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
 
 
 
-
-
-# if __name__ == "__main__":
-#     import uvicorn
-#     import json
-#     from fastapi.openapi.utils import get_openapi
-#     with open('openapi_gg_text.json', 'w') as f:
-#       json.dump(get_openapi(
-#           title="Vercel App Warper for GG API",
-#           version="1.0.0",
-#           summary="This is the warper loader using FastAPI and Vercel",
-#           openapi_version=app.openapi_version,
-#           description="Use this to create, read and update GG SpreadSheet using GG Sheet and GG Drive API",
-#           routes=app.routes,
-#           servers=[{"url" : "https://vercel-app-gg-api.vercel.app"}]
-#       ), f)
-
-
-#     # Run the FastAPI app using UVicorn
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
