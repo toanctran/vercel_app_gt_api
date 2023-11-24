@@ -12,6 +12,7 @@ print(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 SERVICE_ACCOUNT_JSON_PATH = json.loads(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 
 creds = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_JSON_PATH, scopes=['https://www.googleapis.com/auth/drive'])
+gc = gspread.authorize(creds)
 drive_service = build('drive', 'v3', credentials=creds)
 spreadsheet_service = build('sheets', 'v4', credentials=creds)
 
@@ -276,14 +277,13 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
     sheet_name = request_body.sheet_name
     try:
         # Read data from the specified sheet
-        range_name = f"{sheet_name}"
-        result = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
-        values = result.get('values', [])
-        
-        if not values:
+        speadsheet = gc.open_by_key(spreadsheet_id)
+        worksheet = spreadsheet.worksheet(sheet_name)
+        rows = worksheet.get_all_values()
+        if not rows:
             return {"message": f"No data found in '{sheet_name}'."}
         else:
-            return {"data": values}
+            return {"data": rows}
     except Exception as e:
         return {"error": str(e)}
 
