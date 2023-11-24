@@ -275,16 +275,15 @@ def get_sheet_names(request_body: GetSheetNamesRequest):
 def read_worksheet_data(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
-    sheet_row = []
+
     try:
         # Read data from the specified sheet
 
         speadsheet = gc.open_by_key(spreadsheet_id)
         worksheet = spreadsheet.worksheet(sheet_name)
         rows = worksheet.get_all_values()
-        for row in rows:
-            sheet_row.append(row)
-        return {"row": sheet_row}
+        
+        return {"row": rows[4]}
     except Exception as e:
         return {"error": str(e)}
 
