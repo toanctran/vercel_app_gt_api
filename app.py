@@ -271,7 +271,7 @@ def get_sheet_names(request_body: GetSheetNamesRequest):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/read_worksheet_data")
+@app.get("/read_worksheet_data", response_model=list)
 def read_worksheet_data(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
@@ -283,7 +283,7 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
         worksheet = spreadsheet.worksheet(sheet_name)
         rows = worksheet.get_all_values()
         
-        return {"row": rows[4]}
+        return rows[4]
     except Exception as e:
         return {"error": str(e)}
 
