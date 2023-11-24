@@ -276,12 +276,18 @@ def read_worksheet_data_endpoint(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
     try:
-        speadsheet = gc.open_by_key(spreadsheet_id)
-        worksheet = spreadsheet.worksheet(sheet_name)
-        rows = worksheet.get_all_values()
-        return {"data": rows}
+        # Read data from the specified sheet
+        range_name = f"{sheet_name}"
+        result = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
+        values = result.get('values', [])
+        
+        if not values:
+            return {"message": f"No data found in '{sheet_name}'."}
+        else:
+            return {"data": values}
     except Exception as e:
         return {"error": str(e)}
+
 
 
 
