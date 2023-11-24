@@ -280,10 +280,8 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
         speadsheet = gc.open_by_key(spreadsheet_id)
         worksheet = spreadsheet.worksheet(sheet_name)
         rows = worksheet.get_all_values()
-        if not rows:
-            return {"message": f"No data found in '{sheet_name}'."}
-        else:
-            return {"data": rows}
+        
+        return rows
     except Exception as e:
         return {"error": str(e)}
 
