@@ -17,7 +17,9 @@ spreadsheet_service = build('sheets', 'v4', credentials=creds)
 
 # Create FastAPI app
 app = FastAPI()
-
+@app.get("/")
+async def root():
+  return{"message":"hello world"}
 # Pydantic model for GG sheet creation request
 class CreateGoogleSheetRequest(BaseModel):
     new_spreadsheet_title: str
