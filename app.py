@@ -276,16 +276,15 @@ def read_worksheet_data_endpoint(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
 
-    try:
-        # Read data from the specified sheet
+    
+    # Read data from the specified sheet
 
-        speadsheet = gc.open_by_key(spreadsheet_id)
-        worksheet = spreadsheet.worksheet(sheet_name)
-        rows = worksheet.get_all_values()
-        
-        return {"row data" : rows}
-    except Exception as e:
-        return {"error": str(e)}
+    speadsheet = gc.open_by_key(spreadsheet_id)
+    worksheet = spreadsheet.worksheet(sheet_name)
+    rows = worksheet.get_all_values()
+    
+    return {"row data" : rows}
+
 
 
 # if __name__ == "__main__":
