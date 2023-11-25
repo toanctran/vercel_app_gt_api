@@ -30,6 +30,7 @@ class CreateGoogleSheetRequest(BaseModel):
 
 # Pydantic model for folder creation request
 class FolderCreateRequest(BaseModel):
+    parent_folder_id: str
     folder_name: str
 
 # Pydantic model for finding a file by name request
@@ -71,10 +72,6 @@ class FolderInfo(BaseModel):
     created_time: str
     folder_url: str
 
-# Define Pydantic model for request parameters to create a folder
-class CreateFolderRequest(BaseModel):
-    folder_name: str
-
 # Define Pydantic model for request parameters to share a folder
 class ShareFolderRequest(BaseModel):
     folder_id: str
@@ -93,9 +90,10 @@ class UpdatePermissionRoleRequest(BaseModel):
     new_role: str
 
 # Function to create a Google Drive folder
-def create_folder(folder_name):
+def create_folder(parant_folder_id, folder_name):
     folder_metadata = {
         'name': folder_name,
+        'parents':parant_folder_id,
         'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
@@ -237,7 +235,8 @@ def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
 @app.post("/create_folder/", response_model=dict)
 def create_google_drive_folder_endpoint(request_data: FolderCreateRequest):
     folder_name = request_data.folder_name
-    folder_id = create_folder(folder_name)
+    parent_folder_id = request_data.parent_folder_id
+    folder_id = create_folder(parent_folder_id,folder_name)
     return {"message": f"Folder '{folder_name}' created with ID: {folder_id}"}
 
 # Endpoint to list files in a folder
@@ -375,21 +374,6 @@ async def search_folders(request_data: SearchFoldersRequest):
         folders_info.append(FolderInfo(folder_name=folder_name, folder_id=folder_id, created_time=created_time, folder_url=f"https://drive.google.com/drive/folders/{folder_id}"))
     
     return folders_info
-
-# Route to create a folder
-@app.post("/create_folder/")
-async def create_folder(request_data: CreateFolderRequest):
-    folder_name = request_data.folder_name
-    
-    # Create the folder
-    folder_metadata = {
-        'name': folder_name,
-        'mimeType': 'application/vnd.google-apps.folder'
-    }
-    created_folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
-    
-    # Return the folder ID
-    return {"folder_id": created_folder.get('id')}
 
 # Route to share a folder
 @app.post("/share_folder/")
