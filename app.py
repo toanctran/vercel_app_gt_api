@@ -281,7 +281,7 @@ def find_files_by_keyword_endpoint(keyword: str = Query(..., description="Keywor
     else:
         raise HTTPException(status_code=404, detail=f"No files found in Google Drive matching the keyword '{keyword}'")
     
-@app.get("/get_sheet_names", response_model=list[str])
+@app.post("/get_sheet_names", response_model=list[str])
 def get_sheet_names(request_body: GetSheetNamesRequest):
     spreadsheet_id = request_body.spreadsheet_id
     try:
@@ -293,7 +293,7 @@ def get_sheet_names(request_body: GetSheetNamesRequest):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/read_worksheet_rows")
+@app.post("/read_worksheet_rows")
 def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
