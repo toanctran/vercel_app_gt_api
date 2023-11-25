@@ -53,7 +53,7 @@ class ReadWorksheetDataRequest(BaseModel):
 class ContentPlanRowData(BaseModel):
     spreadsheet_id: str
     sheet_name: str
-    headline: str
+    video_title: str
     short_description: str
     tags: str
 
@@ -321,7 +321,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 
 
     # Prepare the data for the new row
-    new_row_data = [[request_body.headline, request_body.short_description, request_body.tags]]
+    new_row_data = [[request_body.video_title, request_body.short_description, request_body.tags]]
 
 
     try:
