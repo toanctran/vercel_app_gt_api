@@ -7,8 +7,8 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Body, Query
 import io
 import json
+
 # Create a service object to interact with the Drive API
-print(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 SERVICE_ACCOUNT_JSON_PATH = json.loads(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 
 creds = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_JSON_PATH, scopes=['https://www.googleapis.com/auth/drive'])
@@ -57,6 +57,37 @@ class ContentPlanRowData(BaseModel):
     short_description: str
     tags: str
 
+# Define Pydantic model for request parameters
+class SearchFoldersRequest(BaseModel):
+    keywords: str
+
+# Define Pydantic model for response format
+class FolderInfo(BaseModel):
+    folder_name: str
+    folder_id: str
+    created_time: str
+    folder_url: str
+
+# Define Pydantic model for request parameters to create a folder
+class CreateFolderRequest(BaseModel):
+    folder_name: str
+
+# Define Pydantic model for request parameters to share a folder
+class ShareFolderRequest(BaseModel):
+    folder_id: str
+    permission_email: str
+    role: str
+
+# Define Pydantic model for request parameters to share a folder
+class ShareFileRequest(BaseModel):
+    file_id: str
+    permission_email: str
+    role: str
+
+class UpdatePermissionRoleRequest(BaseModel):
+    file_id: str
+    permission_email: str
+    new_role: str
 
 # Function to create a Google Drive folder
 def create_folder(folder_name):
@@ -171,6 +202,22 @@ def find_files_by_keyword(keyword):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def create_permission(file_id, permission_email, new_role):
+    permission = {
+        'type': 'user',
+        'role': new_role,
+        'emailAddress': permission_email
+    }
+    return drive_service.permissions().create(fileId=file_id, body=permission).execute()
+
+# Function to find the first empty row in columns C to E starting from row 6
+def find_empty_row(spreadsheet_id, sheet_name):
+    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:E").execute()
+    data = values.get("values", [])
+    for i, row in enumerate(data):
+        if all(cell == "" for cell in row):
+            return i + 6  # Return the row number (6-based index)
+    return None
 
 # Endpoint to create a Google Sheet with copy and permissions
 @app.post("/create_google_sheet/", response_model=dict)
@@ -246,8 +293,8 @@ def get_sheet_names(request_body: GetSheetNamesRequest):
     except Exception as e:
         return {"error": str(e)}
 
-@app.get("/read_worksheet_data")
-def read_worksheet_data(request_body: ReadWorksheetDataRequest):
+@app.get("/read_worksheet_rows")
+def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
     spreadsheet_id = request_body.spreadsheet_id
     sheet_name = request_body.sheet_name
     try:
@@ -255,23 +302,16 @@ def read_worksheet_data(request_body: ReadWorksheetDataRequest):
         range_name = f"{sheet_name}"
         result = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
         values = result.get('values', [])
-        
+        rows = {}
+        for row, value in enumerate(values):
+            rows[row+1] = value
         if not values:
             return {"message": f"No data found in '{sheet_name}'."}
         else:
-            return {"data": values}
+            return rows
     except Exception as e:
         return {"error": str(e)}
 
-
-# Function to find the first empty row in columns C to E starting from row 6
-def find_empty_row(spreadsheet_id, sheet_name):
-    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:E").execute()
-    data = values.get("values", [])
-    for i, row in enumerate(data):
-        if all(cell == "" for cell in row):
-            return i + 6  # Return the row number (6-based index)
-    return None
 
 @app.post("/add_content_plan_row/")
 async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
@@ -314,6 +354,106 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Route to search for folders
+@app.post("/search_folders/", response_model=list[FolderInfo])
+async def search_folders(request_data: SearchFoldersRequest):
+    keywords = request_data.keywords
+    
+    # Search for folders with keywords in their name
+    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder'",
+                                         fields="files(id, name, createdTime)").execute()
+    
+    folders_info = []
+    for folder in results.get('files', []):
+        folder_name = folder['name']
+        folder_id = folder['id']
+        created_time = folder['createdTime']
+        folders_info.append(FolderInfo(folder_name=folder_name, folder_id=folder_id, created_time=created_time, folder_url=f"https://drive.google.com/drive/folders/{folder_id}"))
+    
+    return folders_info
 
+# Route to create a folder
+@app.post("/create_folder/")
+async def create_folder(request_data: CreateFolderRequest):
+    folder_name = request_data.folder_name
+    
+    # Create the folder
+    folder_metadata = {
+        'name': folder_name,
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    created_folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+    
+    # Return the folder ID
+    return {"folder_id": created_folder.get('id')}
 
+# Route to share a folder
+@app.post("/share_folder/")
+async def share_folder(request_data: ShareFolderRequest):
+    folder_id = request_data.folder_id
+    permission_email = request_data.permission_email
+    role = request_data.role
 
+    # Define the permission
+    permission = {
+        'type': 'user',
+        'role': role,
+        'emailAddress': permission_email
+    }
+    
+    try:
+        # Share the folder with the specified email address
+        drive_service.permissions().create(fileId=folder_id, body=permission).execute()
+        return {"message": f"Folder {folder_id} shared with {permission_email} as a {role}."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+# Route to share a file   
+@app.post("/share_file/")
+async def share_file(request_data: ShareFileRequest):
+    file_id = request_data.file_id
+    permission_email = request_data.permission_email
+    role = request_data.role
+
+    # Define the permission
+    permission = {
+        'type': 'user',
+        'role': role,
+        'emailAddress': permission_email
+    }
+    
+    try:
+        # Share the folder with the specified email address
+        create_permission(file_id=file_id, permission_email=permission_email, new_role=role)
+        return {"message": f"File {file_id} shared with {permission_email} as a {role}."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+@app.post("/update_permission_role/")
+async def update_permission_role(request_data: UpdatePermissionRoleRequest):
+    file_id = request_data.file_id
+    permission_email = request_data.permission_email
+    new_role = request_data.new_role
+    
+    try:
+        # Get the current permissions for the file
+        permissions = drive_service.permissions().list(fileId=file_id).execute()
+        
+        # Find the permission with the specified email address
+        target_permission = None
+        for permission in permissions.get('permissions', []):
+            if permission['emailAddress'] == permission_email:
+                target_permission = permission
+                break
+        
+        if target_permission:
+            # Update the role for the existing permission
+            target_permission['role'] = new_role
+            drive_service.permissions().update(fileId=file_id, permissionId=target_permission['id'], body=target_permission).execute()
+            return {"message": f"Permission role for {permission_email} on file {file_id} updated to {new_role}."}
+        else:
+            # Create a new permission with the requested role
+            create_permission(file_id, permission_email, new_role)
+            return {"message": f"Created permission for {permission_email} on file {file_id} with role {new_role}."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
