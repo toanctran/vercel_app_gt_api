@@ -53,13 +53,16 @@ class ReadWorksheetDataRequest(BaseModel):
 class ContentPlanRowData(BaseModel):
     spreadsheet_id: str
     sheet_name: str
+    channel: str
     video_title: str
     short_description: str
     tags: str
+    hashtags: str
 
 # Define Pydantic model for request parameters
 class SearchFoldersRequest(BaseModel):
     keywords: str
+    folder_id: str
 
 # Define Pydantic model for response format
 class FolderInfo(BaseModel):
@@ -157,7 +160,7 @@ def create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permission
 
     return web_view_link
 
-def list_files_and_folders():
+def list_files_in_drive():
     try:
         # List all files and folders in Google Drive
         results = drive_service.files().list(
@@ -210,9 +213,9 @@ def create_permission(file_id, permission_email, new_role):
     }
     return drive_service.permissions().create(fileId=file_id, body=permission).execute()
 
-# Function to find the first empty row in columns C to E starting from row 6
+# Function to find the first empty row in columns C to G starting from row 6
 def find_empty_row(spreadsheet_id, sheet_name):
-    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:E").execute()
+    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:G").execute()
     data = values.get("values", [])
     for i, row in enumerate(data):
         if all(cell == "" for cell in row):
@@ -267,12 +270,12 @@ def create_file_endpoint(request_data: CreateDriveFileRequest):
     return {"message": f"File '{file_name}' created with ID: {file_id}"}
 
 # Endpoint to list all files and folders in GG Drive
-@app.get("/list_drive_files", response_model=list)
+@app.get("/list_drive_files", response_model=list[dict])
 def list_drive_files():
-    return list_files_and_folders()
+    return list_files_in_drive()
 
 # Endpoint to search file from keyword
-@app.get("/find_files", response_model=list)
+@app.get("/find_files", response_model=list[dict])
 def find_files_by_keyword_endpoint(keyword: str = Query(..., description="Keyword to search for in file names")):
     file_list = find_files_by_keyword(keyword)
 
@@ -321,7 +324,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 
 
     # Prepare the data for the new row
-    new_row_data = [[request_body.video_title, request_body.short_description, request_body.tags]]
+    new_row_data = [[request_body.channel,request_body.video_tile, request_body.short_description, request_body.tags, request_body.hashtags]]
 
 
     try:
@@ -330,11 +333,11 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 
         if empty_row is not None:
             # If an empty row is found, update it
-            range_name = f"{sheet_name}!C{empty_row}:E{empty_row}"
+            range_name = f"{sheet_name}!C{empty_row}:G{empty_row}"
         else:
             # If no empty row is found, add a new row
             empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
-            range_name = f"{sheet_name}!C{empty_row}:E{empty_row}"
+            range_name = f"{sheet_name}!C{empty_row}:G{empty_row}"
 
         # Prepare the request body to add a new row or update the existing row
         request_body = {
@@ -358,9 +361,10 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 @app.post("/search_folders/", response_model=list[FolderInfo])
 async def search_folders(request_data: SearchFoldersRequest):
     keywords = request_data.keywords
+    folderId = request_data.folder_id
     
     # Search for folders with keywords in their name
-    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder'",
+    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder' and '{folderId}' in parents",
                                          fields="files(id, name, createdTime)").execute()
     
     folders_info = []
