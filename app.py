@@ -338,7 +338,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 
 
     # Prepare the data for the new row
-    new_row_data = [[request_body.channel,request_body.video_tile, request_body.short_description, request_body.tags, request_body.hashtags]]
+    new_row_data = [[request_body.channel,request_body.video_title, request_body.short_description, request_body.tags, request_body.hashtags]]
 
 
     try:
