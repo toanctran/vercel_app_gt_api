@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Body, Query
 import io
 import json
 
+
 # Create a service object to interact with the Drive API
 SERVICE_ACCOUNT_JSON_PATH = json.loads(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 
@@ -44,13 +45,16 @@ class CreateDriveFileRequest(BaseModel):
     file_name: str
     file_content: str  # Content of the file as a string
 
+# Pydantic model for get sheet name in spreadsheet request
 class GetSheetNamesRequest(BaseModel):
     spreadsheet_id: str
 
+# Pydantic model for get sheet rows data in spreadsheet request
 class ReadWorksheetDataRequest(BaseModel):
     spreadsheet_id: str
     sheet_name: str
 
+# Pydantic model for update content plan ro
 class ContentPlanRowData(BaseModel):
     spreadsheet_id: str
     sheet_name: str
@@ -84,10 +88,20 @@ class ShareFileRequest(BaseModel):
     permission_email: str
     role: str
 
+# Define Pydantic model for request parameters to update role permission to file and folder
 class UpdatePermissionRoleRequest(BaseModel):
     file_id: str
     permission_email: str
     new_role: str
+
+
+# Define the data model for Spreadsheet Cell Update
+class SpreadsheetCellUpdate(BaseModel):
+    spreadsheet_id: str 
+    sheet_name: str
+    cell_column: str # This field represents the cell column location, e.g., "A", "B"
+    cell_row: str  # This field represents the cell row location, e.g., "1", "2"
+    content: str
 
 # Function to create a Google Drive folder
 def create_folder(parent_folder_id, folder_name):
@@ -445,3 +459,31 @@ async def update_permission_role(request_data: UpdatePermissionRoleRequest):
             return {"message": f"Created permission for {permission_email} on file {file_id} with role {new_role}."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+# FastAPI endpoint to update the spreadsheet cell
+@app.post("/update-spreadsheet-cell/")
+async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
+    sheet_name = request_data.sheet_name
+    spreadsheet_id = request_data.spreadsheet_id
+    cell_row = request_data.cell_row
+    cell_column = request_data.cell_column
+    content = request_data.content
+    
+
+    try:
+        cell = f"{cell_column}{cell_row}"
+        values = [[content]]
+        body = {
+            'values': values
+        }
+        range_name = f"{sheet_name}!{cell}"
+        value_input_option = "USER_ENTERED"
+        result = spreadsheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption=value_input_option,
+            body=body
+        ).execute()
+        return {"message": f"Cell {cell} in {sheet_name} updated successfully!"}
+    except Exception as e:
+        return {"error": str(e)}
