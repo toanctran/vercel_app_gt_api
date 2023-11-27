@@ -461,7 +461,7 @@ async def update_permission_role(request_data: UpdatePermissionRoleRequest):
         raise HTTPException(status_code=400, detail=str(e))
     
 # FastAPI endpoint to update the spreadsheet cell
-@app.post("/update-spreadsheet-cell/")
+@app.post("/update_spreadsheet_cell/")
 async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
     sheet_name = request_data.sheet_name
     spreadsheet_id = request_data.spreadsheet_id
