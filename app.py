@@ -93,7 +93,7 @@ class UpdatePermissionRoleRequest(BaseModel):
 def create_folder(parent_folder_id, folder_name):
     folder_metadata = {
         'name': folder_name,
-        'parents':[{'id': parent_folder_id}],
+        'parents':[parent_folder_id],
         'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
