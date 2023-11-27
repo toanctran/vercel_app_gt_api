@@ -63,7 +63,7 @@ class ContentPlanRowData(BaseModel):
 # Define Pydantic model for request parameters
 class SearchFoldersRequest(BaseModel):
     keywords: str
-    folder_id: str
+    parent_folder_id: str
 
 # Define Pydantic model for response format
 class FolderInfo(BaseModel):
@@ -90,10 +90,10 @@ class UpdatePermissionRoleRequest(BaseModel):
     new_role: str
 
 # Function to create a Google Drive folder
-def create_folder(parant_folder_id, folder_name):
+def create_folder(parent_folder_id, folder_name):
     folder_metadata = {
         'name': folder_name,
-        'parents':parant_folder_id,
+        'parents':[{'id': parent_folder_id}],
         'mimeType': 'application/vnd.google-apps.folder'
     }
     folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
@@ -221,7 +221,7 @@ def find_empty_row(spreadsheet_id, sheet_name):
     return None
 
 # Endpoint to create a Google Sheet with copy and permissions
-@app.post("/create_google_sheet/")
+@app.post("/create_google_sheet/", response_model=dict)
 def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
     source_spreadsheet_id = request_data.source_spreadsheet_id
     new_spreadsheet_title = request_data.new_spreadsheet_title
@@ -232,7 +232,7 @@ def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
     return {"message": f"Success! New Google Sheet created: {web_view_link}"}
 
 # Endpoint to create a Google Drive folder
-@app.post("/create_folder/")
+@app.post("/create_folder/", response_model=dict)
 def create_google_drive_folder_endpoint(request_data: FolderCreateRequest):
     folder_name = request_data.folder_name
     parent_folder_id = request_data.parent_folder_id
@@ -248,7 +248,7 @@ def list_files_endpoint(folder_id: str):
     return files
 
 # Endpoint to find a file by name in a folder
-@app.post("/find_file_in_folder/")
+@app.post("/find_file_in_folder/", response_model=dict)
 def find_file_in_folder_endpoint(request_data: FindFileRequest):
     folder_id = request_data.folder_id
     file_name = request_data.file_name
@@ -259,7 +259,7 @@ def find_file_in_folder_endpoint(request_data: FindFileRequest):
         raise HTTPException(status_code=404, detail=f"File '{file_name}' not found in the folder")
 
 # Endpoint to create a file in a specific folder
-@app.post("/create_file/")
+@app.post("/create_file/", response_model=dict)
 def create_file_endpoint(request_data: CreateDriveFileRequest):
     folder_id = request_data.folder_id
     file_name = request_data.file_name
@@ -323,7 +323,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 
 
     # Prepare the data for the new row
-    new_row_data = [[request_body.channel,request_body.video_title, request_body.short_description, request_body.tags, request_body.hashtags]]
+    new_row_data = [[request_body.channel,request_body.video_tile, request_body.short_description, request_body.tags, request_body.hashtags]]
 
 
     try:
@@ -360,10 +360,10 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
 @app.post("/search_folders/", response_model=list[FolderInfo])
 async def search_folders(request_data: SearchFoldersRequest):
     keywords = request_data.keywords
-    folderId = request_data.folder_id
+    ParentFolderId = request_data.parent_folder_id
     
     # Search for folders with keywords in their name
-    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder' and '{folderId}' in parents",
+    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder' and '{ParentFolderId}' in parents",
                                          fields="files(id, name, createdTime)").execute()
     
     folders_info = []
