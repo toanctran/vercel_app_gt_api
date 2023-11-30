@@ -246,6 +246,44 @@ def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
     web_view_link = create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permissions_email, folder_id)
     return {"message": f"Success! New Google Sheet created: {web_view_link}"}
 
+
+class PresentationRequest(BaseModel):
+    title: str
+    presentation_template_id : str
+    permission_email: str
+    parent_folder_id: str
+    
+@app.post("/create_presentation/")
+async def create_presentation_endpoint(request_data: PresentationRequest):
+    try:
+        # Create a copy of the template presentation
+        presentation_template_id = request_data.presentation_template_id
+        parent_folder_id = request_data.parent_folder_id
+        new_title = request_data.title
+        permission_email = request_data.permission_email
+
+        copied_presentation = drive_service.files().copy(
+            fileId=presentation_template_id,
+            body={"name": new_title, 'parents': [parent_folder_id]}
+        ).execute()
+
+        
+        permission = {
+            "type": "user",
+            "role": "writer",
+            "emailAddress": permission_email,
+        }
+        drive_service.permissions().create(
+            fileId=copied_presentation["id"], body=permission
+        ).execute()
+
+        presentation_url = f"https://docs.google.com/presentation/d/{copied_presentation['id']}/edit"
+
+        return {"message": "Presentation created and shared successfully", "presentation_url": presentation_url}
+
+    except Exception as e:
+        return {"error": str(e)}
+
 # Endpoint to create a Google Drive folder
 @app.post("/create_folder/", response_model=dict)
 def create_google_drive_folder_endpoint(request_data: FolderCreateRequest):
