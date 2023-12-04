@@ -23,127 +23,14 @@ app = FastAPI()
 @app.get("/")
 async def root():
   return{"message":"Created by Tran Chi Toan - chitoantran@gmail.com"}
-# Pydantic model for GG sheet creation request
+
+
 class CreateGoogleSheetRequest(BaseModel):
     new_spreadsheet_title: str
     permissions_email: str
     source_spreadsheet_id: str
     folder_id: str
 
-# Pydantic model for folder creation request
-class FolderCreateRequest(BaseModel):
-    parent_folder_id: str
-    folder_name: str
-
-# Pydantic model for finding a file by name request
-class FindFileRequest(BaseModel):
-    folder_id: str
-    file_name: str
-
-# Pydantic model for creating a Google Drive file request
-class CreateDriveFileRequest(BaseModel):
-    folder_id: str
-    file_name: str
-    file_content: str  # Content of the file as a string
-
-# Pydantic model for get sheet name in spreadsheet request
-class GetSheetNamesRequest(BaseModel):
-    spreadsheet_id: str
-
-# Pydantic model for get sheet rows data in spreadsheet request
-class ReadWorksheetDataRequest(BaseModel):
-    spreadsheet_id: str
-    sheet_name: str
-
-# Pydantic model for update content plan ro
-class ContentPlanRowData(BaseModel):
-    spreadsheet_id: str
-    sheet_name: str
-    channel: str
-    video_title: str
-    short_description: str
-    tags: str
-    hashtags: str
-
-# Define Pydantic model for request parameters
-class SearchFoldersRequest(BaseModel):
-    keywords: str
-    parent_folder_id: str
-
-# Define Pydantic model for response format
-class FolderInfo(BaseModel):
-    folder_name: str
-    folder_id: str
-    created_time: str
-    folder_url: str
-
-# Define Pydantic model for request parameters to share a folder
-class ShareFolderRequest(BaseModel):
-    folder_id: str
-    permission_email: str
-    role: str
-
-# Define Pydantic model for request parameters to share a folder
-class ShareFileRequest(BaseModel):
-    file_id: str
-    permission_email: str
-    role: str
-
-# Define Pydantic model for request parameters to update role permission to file and folder
-class UpdatePermissionRoleRequest(BaseModel):
-    file_id: str
-    permission_email: str
-    new_role: str
-
-
-# Define the data model for Spreadsheet Cell Update
-class SpreadsheetCellUpdate(BaseModel):
-    spreadsheet_id: str 
-    sheet_name: str
-    cell_column: str # This field represents the cell column location, e.g., "A", "B"
-    cell_row: str  # This field represents the cell row location, e.g., "1", "2"
-    content: str
-
-# Function to create a Google Drive folder
-def create_folder(parent_folder_id, folder_name):
-    folder_metadata = {
-        'name': folder_name,
-        'parents':[parent_folder_id],
-        'mimeType': 'application/vnd.google-apps.folder'
-    }
-    folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
-    return folder.get('id')
-
-# Function to list files in a folder and retrieve their details
-def list_files_in_folder(folder_id):
-    results = drive_service.files().list(q=f"'{folder_id}' in parents", fields='files(id, name, createdTime)').execute()
-    files = results.get('files', [])
-    return files
-
-# Function to find a file by its name and return its ID
-def find_file_in_folder_id_by_name(folder_id, file_name):
-    files = list_files_in_folder(folder_id)
-    for file in files:
-        if file['name'] == file_name:
-            return file['id']
-    return None
-
-# Function to create a file in a specific folder
-def create_file_in_folder(folder_id, file_name, file_content):
-    file_content_bytes = file_content.encode('utf-8')
-    media_filename = file_name
-    file_metadata = {
-        'name': file_name,
-        'parents': [folder_id]
-    }
-    media_body = drive_service.files().create(
-        body=file_metadata,
-        media_body=io.BytesIO(file_content_bytes),
-        fields='id'
-    ).execute()
-    return media_body.get('id')
-
-# Function to create a copy of a Google Sheet with a new title and set writer permissions
 def create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permissions_email, folder_id):
     # Create a copy of the source spreadsheet with the specified title
     copied_spreadsheet = {
@@ -173,6 +60,75 @@ def create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permission
 
     return web_view_link
 
+# Endpoint to create a Google Sheet with copy and permissions
+@app.post("/create_google_sheet/")
+def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
+    source_spreadsheet_id = request_data.source_spreadsheet_id
+    new_spreadsheet_title = request_data.new_spreadsheet_title
+    permissions_email = request_data.permissions_email
+    folder_id = request_data.folder_id  # Destination folder ID
+
+    web_view_link = create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permissions_email, folder_id)
+    return {"message": f"Success! New Google Sheet created: {web_view_link}"}
+
+# Pydantic model for folder creation request
+class CreateFolderRequest(BaseModel):
+    parent_folder_id: str
+    folder_name: str
+
+# Function to create a Google Drive folder
+def create_folder(parent_folder_id, folder_name):
+    folder_metadata = {
+        'name': folder_name,
+        'parents':[parent_folder_id],
+        'mimeType': 'application/vnd.google-apps.folder'
+    }
+    folder = drive_service.files().create(body=folder_metadata, fields='id').execute()
+
+    web_view_link = f"https://drive.google.com/drive/u/0/folders/{folder.get('id')}"
+    return folder.get('id'), web_view_link
+
+# Endpoint to create a Google Drive folder
+@app.post("/create_folder")
+def create_google_drive_folder_endpoint(request_data: CreateFolderRequest):
+    folder_name = request_data.folder_name
+    parent_folder_id = request_data.parent_folder_id
+    folder_id, folder_url = create_folder(parent_folder_id,folder_name)
+    return {"message": f"Folder '{folder_name}' created with ID {folder_id} : {folder_url}"}
+
+# Define Pydantic model for request parameters
+class SearchFoldersRequest(BaseModel):
+    keywords: str
+    parent_folder_id: str
+
+# Define Pydantic model for response format
+class FolderInfo(BaseModel):
+    folder_name: str
+    folder_id: str
+    created_time: str
+    folder_url: str
+
+# Route to search for folders
+@app.post("/search_folder_in_folder/", response_model=list[FolderInfo])
+async def search_folder_in_folder_endpoint(request_data: SearchFoldersRequest):
+    keywords = request_data.keywords
+    ParentFolderId = request_data.parent_folder_id
+    
+    # Search for folders with keywords in their name
+    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder' and '{ParentFolderId}' in parents",
+                                         fields="files(id, name, createdTime)").execute()
+    
+    folders_info = []
+    for folder in results.get('files', []):
+        folder_name = folder['name']
+        folder_id = folder['id']
+        created_time = folder['createdTime']
+        folders_info.append(FolderInfo(folder_name=folder_name, folder_id=folder_id, created_time=created_time, folder_url=f"https://drive.google.com/drive/folders/{folder_id}"))
+    
+    return folders_info
+
+
+# Function helpers for list all files and folders in Google Drive
 def list_files_in_drive():
     try:
         # List all files and folders in Google Drive
@@ -201,11 +157,56 @@ def list_files_in_drive():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
     
+# Endpoint to list all files and folders in GG Drive
+@app.get("/list_drive_files", response_model=list[dict])
+def list_drive_files_endpoint():
+    return list_files_in_drive()
+
+# Function to list files in a folder_id and retrieve their details
+def list_files_in_folder(folder_id):
+    results = drive_service.files().list(q=f"'{folder_id}' in parents", fields='files(id, name, createdTime)').execute()
+    files = results.get('files', [])
+    return files
+
+# Endpoint to list files in a specific folder_id
+@app.get("/list_files_in_folder/{folder_id}", response_model=List[dict])
+def list_files_in_folder_endpoint(folder_id: str):
+    files = list_files_in_folder(folder_id)
+    if not files:
+        raise HTTPException(status_code=404, detail="Folder not found or empty")
+    return files
+
+
+# Function to find a file by its name and return its ID
+def find_file_in_folder_id_by_name(folder_id, file_name):
+    files = list_files_in_folder(folder_id)
+    for file in files:
+        if file['name'] == file_name:
+            return file['id']
+    return None
+
+# Pydantic model for finding a file by name request
+class SearchFileRequest(BaseModel):
+    folder_id: str
+    file_name: str
+
+# Endpoint to find a file by name in a folder
+@app.post("/search_file_in_folder")
+def search_file_in_folder_endpoint(request_data: SearchFileRequest):
+    folder_id = request_data.folder_id
+    file_name = request_data.file_name
+    file_id = find_file_in_folder_id_by_name(folder_id, file_name)
+    if file_id:
+        return {"message": f"File '{file_name}' found with ID: {file_id}"}
+    else:
+        raise HTTPException(status_code=404, detail=f"File '{file_name}' not found in the folder")
+    
+# Function helpers to search files with keywords in Google Drive
 def find_files_by_keyword(keyword):
     try:
         # List all files in Google Drive
         results = drive_service.files().list(
-            q=f"name contains '{keyword}'",
+            q=f"name contains '{keyword}' and trashed=false",
             fields="files(id, name, mimeType,createdTime, webViewLink)"
         ).execute()
 
@@ -217,220 +218,54 @@ def find_files_by_keyword(keyword):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
-def create_permission(file_id, permission_email, new_role):
+# # Endpoint to search file from keyword
+# @app.get("/search_files", response_model=list[dict])
+# def find_files_by_keyword_endpoint(keyword: str = Query(..., description="Keyword to search for in file names")):
+#     file_list = find_files_by_keyword(keyword)
+
+#     if file_list:
+#         return file_list
+#     else:
+#         raise HTTPException(status_code=404, detail=f"No files found in Google Drive matching the keyword '{keyword}'")
+    
+# Define Pydantic model for request parameters to share a folder
+class ShareFileRequest(BaseModel):
+    file_id: str
+    permission_email: str
+    role: str
+
+# Route to share a file   
+@app.post("/share_file/")
+async def share_file_endpoint(request_data: ShareFileRequest):
+    file_id = request_data.file_id
+    permission_email = request_data.permission_email
+    role = request_data.role
+
+    # Define the permission
     permission = {
         'type': 'user',
-        'role': new_role,
+        'role': role,
         'emailAddress': permission_email
     }
-    return drive_service.permissions().create(fileId=file_id, body=permission).execute()
+    
+    try:
+        # Share the folder with the specified email address
+        drive_service.permissions().create(fileId=file_id, body=permission).execute()
+        return {"message": f"File {file_id} shared with {permission_email} as a {role}."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
-# Function to find the first empty row in columns C to G starting from row 6
-def find_empty_row(spreadsheet_id, sheet_name):
-    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:G").execute()
-    data = values.get("values", [])
-    for i, row in enumerate(data):
-        if all(cell == "" for cell in row):
-            return i + 6  # Return the row number (6-based index)
-    return None
-
-# Endpoint to create a Google Sheet with copy and permissions
-@app.post("/create_google_sheet/", response_model=dict)
-def create_google_sheet_endpoint(request_data: CreateGoogleSheetRequest):
-    source_spreadsheet_id = request_data.source_spreadsheet_id
-    new_spreadsheet_title = request_data.new_spreadsheet_title
-    permissions_email = request_data.permissions_email
-    folder_id = request_data.folder_id  # Destination folder ID
-
-    web_view_link = create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permissions_email, folder_id)
-    return {"message": f"Success! New Google Sheet created: {web_view_link}"}
-
-
-class PresentationRequest(BaseModel):
-    title: str
-    presentation_template_id : str
+# Define Pydantic model for request parameters to share a folder
+class ShareFolderRequest(BaseModel):
+    folder_id: str
     permission_email: str
-    parent_folder_id: str
-    
-@app.post("/create_presentation/")
-async def create_presentation_endpoint(request_data: PresentationRequest):
-    try:
-        # Create a copy of the template presentation
-        presentation_template_id = request_data.presentation_template_id
-        parent_folder_id = request_data.parent_folder_id
-        new_title = request_data.title
-        permission_email = request_data.permission_email
-
-        copied_presentation = drive_service.files().copy(
-            fileId=presentation_template_id,
-            body={"name": new_title, 'parents': [parent_folder_id]}
-        ).execute()
-
-        
-        permission = {
-            "type": "user",
-            "role": "writer",
-            "emailAddress": permission_email,
-        }
-        drive_service.permissions().create(
-            fileId=copied_presentation["id"], body=permission
-        ).execute()
-
-        presentation_url = f"https://docs.google.com/presentation/d/{copied_presentation['id']}/edit"
-
-        return {"message": "Presentation created and shared successfully", "presentation_url": presentation_url}
-
-    except Exception as e:
-        return {"error": str(e)}
-
-# Endpoint to create a Google Drive folder
-@app.post("/create_folder/", response_model=dict)
-def create_google_drive_folder_endpoint(request_data: FolderCreateRequest):
-    folder_name = request_data.folder_name
-    parent_folder_id = request_data.parent_folder_id
-    folder_id = create_folder(parent_folder_id,folder_name)
-    return {"message": f"Folder '{folder_name}' created with ID: {folder_id}"}
-
-# Endpoint to list files in a folder
-@app.get("/list_files/{folder_id}", response_model=List[dict])
-def list_files_endpoint(folder_id: str):
-    files = list_files_in_folder(folder_id)
-    if not files:
-        raise HTTPException(status_code=404, detail="Folder not found or empty")
-    return files
-
-# Endpoint to find a file by name in a folder
-@app.post("/find_file_in_folder/", response_model=dict)
-def find_file_in_folder_endpoint(request_data: FindFileRequest):
-    folder_id = request_data.folder_id
-    file_name = request_data.file_name
-    file_id = find_file_in_folder_id_by_name(folder_id, file_name)
-    if file_id:
-        return {"message": f"File '{file_name}' found with ID: {file_id}"}
-    else:
-        raise HTTPException(status_code=404, detail=f"File '{file_name}' not found in the folder")
-
-# Endpoint to create a file in a specific folder
-@app.post("/create_file/", response_model=dict)
-def create_file_endpoint(request_data: CreateDriveFileRequest):
-    folder_id = request_data.folder_id
-    file_name = request_data.file_name
-    file_content = request_data.file_content
-
-    file_id = create_file_in_folder(folder_id=folder_id, file_content=file_content, file_name=file_name)
-    return {"message": f"File '{file_name}' created with ID: {file_id}"}
-
-# Endpoint to list all files and folders in GG Drive
-@app.get("/list_drive_files", response_model=list[dict])
-def list_drive_files():
-    return list_files_in_drive()
-
-# Endpoint to search file from keyword
-@app.get("/find_files", response_model=list[dict])
-def find_files_by_keyword_endpoint(keyword: str = Query(..., description="Keyword to search for in file names")):
-    file_list = find_files_by_keyword(keyword)
-
-    if file_list:
-        return file_list
-    else:
-        raise HTTPException(status_code=404, detail=f"No files found in Google Drive matching the keyword '{keyword}'")
-    
-@app.post("/get_sheet_names", response_model=list[str])
-def get_sheet_names(request_body: GetSheetNamesRequest):
-    spreadsheet_id = request_body.spreadsheet_id
-    try:
-        # Get a list of sheet names in the spreadsheet
-        spreadsheet_metadata = spreadsheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        sheets = spreadsheet_metadata.get('sheets', [])
-        sheet_names = [sheet['properties']['title'] for sheet in sheets]
-        return sheet_names
-    except Exception as e:
-        return {"error": str(e)}
-
-@app.post("/read_worksheet_rows")
-def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
-    spreadsheet_id = request_body.spreadsheet_id
-    sheet_name = request_body.sheet_name
-    try:
-        # Read data from the specified sheet
-        range_name = f"{sheet_name}"
-        result = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
-        values = result.get('values', [])
-        rows = {}
-        for row, value in enumerate(values):
-            rows[row+1] = value
-        if not values:
-            return {"message": f"No data found in '{sheet_name}'."}
-        else:
-            return rows
-    except Exception as e:
-        return {"error": str(e)}
-
-
-@app.post("/add_content_plan_row/")
-async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
-    # Spreadsheet ID and Sheet name 
-    spreadsheet_id = request_body.spreadsheet_id
-    sheet_name = request_body.sheet_name # Replace with your Google Sheet ID
-
-
-    # Prepare the data for the new row
-    new_row_data = [[request_body.channel,request_body.video_title, request_body.short_description, request_body.tags, request_body.hashtags]]
-
-
-    try:
-        # Find the first empty row in columns C to E starting from row 6
-        empty_row = find_empty_row(spreadsheet_id,sheet_name)
-
-        if empty_row is not None:
-            # If an empty row is found, update it
-            range_name = f"{sheet_name}!C{empty_row}:G{empty_row}"
-        else:
-            # If no empty row is found, add a new row
-            empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
-            range_name = f"{sheet_name}!C{empty_row}:G{empty_row}"
-
-        # Prepare the request body to add a new row or update the existing row
-        request_body = {
-            "values": new_row_data
-        }
-
-        # Make the API request to update or add the row
-        response = spreadsheet_service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range=range_name,
-            valueInputOption="RAW",
-            body=request_body
-        ).execute()
-
-        return {"message": f"Row {empty_row} updated/added successfully."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-# Route to search for folders
-@app.post("/search_folders/", response_model=list[FolderInfo])
-async def search_folders(request_data: SearchFoldersRequest):
-    keywords = request_data.keywords
-    ParentFolderId = request_data.parent_folder_id
-    
-    # Search for folders with keywords in their name
-    results = drive_service.files().list(q=f"name contains '{keywords}' and mimeType='application/vnd.google-apps.folder' and '{ParentFolderId}' in parents",
-                                         fields="files(id, name, createdTime)").execute()
-    
-    folders_info = []
-    for folder in results.get('files', []):
-        folder_name = folder['name']
-        folder_id = folder['id']
-        created_time = folder['createdTime']
-        folders_info.append(FolderInfo(folder_name=folder_name, folder_id=folder_id, created_time=created_time, folder_url=f"https://drive.google.com/drive/folders/{folder_id}"))
-    
-    return folders_info
+    role: str
 
 # Route to share a folder
 @app.post("/share_folder/")
-async def share_folder(request_data: ShareFolderRequest):
+async def share_folder_endpoint(request_data: ShareFolderRequest):
     folder_id = request_data.folder_id
     permission_email = request_data.permission_email
     role = request_data.role
@@ -449,29 +284,16 @@ async def share_folder(request_data: ShareFolderRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
-# Route to share a file   
-@app.post("/share_file/")
-async def share_file(request_data: ShareFileRequest):
-    file_id = request_data.file_id
-    permission_email = request_data.permission_email
-    role = request_data.role
 
-    # Define the permission
-    permission = {
-        'type': 'user',
-        'role': role,
-        'emailAddress': permission_email
-    }
-    
-    try:
-        # Share the folder with the specified email address
-        create_permission(file_id=file_id, permission_email=permission_email, new_role=role)
-        return {"message": f"File {file_id} shared with {permission_email} as a {role}."}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    
+# Define Pydantic model for request parameters to update role permission to file and folder
+class UpdatePermissionRoleRequest(BaseModel):
+    file_id: str
+    permission_email: str
+    new_role: str
+
+# Endpoint for updating file access permission
 @app.post("/update_permission_role/")
-async def update_permission_role(request_data: UpdatePermissionRoleRequest):
+async def update_permission_role_endpoint(request_data: UpdatePermissionRoleRequest):
     file_id = request_data.file_id
     permission_email = request_data.permission_email
     new_role = request_data.new_role
@@ -493,12 +315,132 @@ async def update_permission_role(request_data: UpdatePermissionRoleRequest):
             drive_service.permissions().update(fileId=file_id, permissionId=target_permission['id'], body=target_permission).execute()
             return {"message": f"Permission role for {permission_email} on file {file_id} updated to {new_role}."}
         else:
+             # Define the permission
+            permission = {
+                'type': 'user',
+                'role': new_role,
+                'emailAddress': permission_email
+            }
             # Create a new permission with the requested role
-            create_permission(file_id, permission_email, new_role)
+            drive_service.permissions().create(fileId=file_id, body=permission).execute()
             return {"message": f"Created permission for {permission_email} on file {file_id} with role {new_role}."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+
+# Pydantic model for get sheet name in spreadsheet request
+class GetSheetNamesRequest(BaseModel):
+    spreadsheet_id: str
+
+@app.post("/get_sheet_names")
+def get_sheet_names_endpoint(request_body: GetSheetNamesRequest):
+    spreadsheet_id = request_body.spreadsheet_id
+    try:
+        # Get a list of sheet names in the spreadsheet
+        spreadsheet_metadata = spreadsheet_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = spreadsheet_metadata.get('sheets', [])
+        sheet_names = [sheet['properties']['title'] for sheet in sheets]
+        return sheet_names
+    except Exception as e:
+        return {"error": str(e)}
+    
+# Pydantic model for get sheet rows data in spreadsheet request
+class ReadWorksheetDataRequest(BaseModel):
+    spreadsheet_id: str
+    sheet_name: str
+
+@app.post("/read_worksheet_rows")
+def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
+    spreadsheet_id = request_body.spreadsheet_id
+    sheet_name = request_body.sheet_name
+    try:
+        # Read data from the specified sheet
+        range_name = f"{sheet_name}"
+        result = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
+        values = result.get('values', [])
+        rows = {}
+        for row, value in enumerate(values):
+            rows[f'{row+1}'] = value
+        if not values:
+            return {"message": f"No data found in '{sheet_name}'."}
+        else:
+            return rows
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# Pydantic model for update content plan ro
+class ContentPlanRowData(BaseModel):
+    spreadsheet_id: str
+    sheet_name: str
+    channel: str
+    channel_bio_link: str
+    content_pillar: str
+    video_title: str
+    video_summary: str
+    keywords: str
+    video_description: str
+    tags: str
+    hashtags: str
+
+# Function to find the first empty row in columns C to G starting from row 6
+def find_empty_row_for_content_plan(spreadsheet_id, sheet_name):
+    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:K").execute()
+    data = values.get("values", [])
+    for i, row in enumerate(data):
+        if all(cell == "" for cell in row):
+            return i + 6  # Return the row number (6-based index)
+    return None
+
+# Endpoint for adding new content plan row
+@app.post("/add_content_plan_row/")
+async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
+    # Spreadsheet ID and Sheet name 
+    spreadsheet_id = request_body.spreadsheet_id
+    sheet_name = request_body.sheet_name # Replace with your Google Sheet ID
+
+    # Prepare the data for the new row
+    new_row_data = [[request_body.channel, request_body.channel_bio_link, request_body.content_pillar, request_body.video_title, request_body.video_summary, request_body.keywords ,request_body.video_description, request_body.tags, request_body.hashtags]]
+
+    try:
+        # Find the first empty row in columns C to E starting from row 6
+        empty_row = find_empty_row_for_content_plan(spreadsheet_id,sheet_name)
+
+        if empty_row is not None:
+            # If an empty row is found, update it
+            range_name = f"{sheet_name}!C{empty_row}:K{empty_row}"
+        else:
+            # If no empty row is found, add a new row
+            empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
+            range_name = f"{sheet_name}!C{empty_row}:K{empty_row}"
+
+        # Prepare the request body to add a new row or update the existing row
+        request_body = {
+            "values": new_row_data
+        }
+
+        # Make the API request to update or add the row
+        response = spreadsheet_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption="USER_ENTERED",
+            body=request_body
+        ).execute()
+
+        return {"message": f"Row {empty_row} updated/added successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Define the data model for Spreadsheet Cell Update
+class SpreadsheetCellUpdate(BaseModel):
+    spreadsheet_id: str 
+    sheet_name: str
+    cell_column: str # This field represents the cell column location, e.g., "A", "B"
+    cell_row: str  # This field represents the cell row location, e.g., "1", "2"
+    content: str
+
+
 # FastAPI endpoint to update the spreadsheet cell
 @app.post("/update_spreadsheet_cell/")
 async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
@@ -526,3 +468,20 @@ async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
         return {"message": f"Cell {cell} in {sheet_name} updated successfully!"}
     except Exception as e:
         return {"error": str(e)}
+    
+@app.delete("/delete_all_files")
+async def delete_all_files_endpoint(exclude_ids: list = Query(None)):
+    try:
+        # List all files in Google Drive
+        results = drive_service.files().list(fields="files(id)").execute()
+        files = results.get('files', [])
+
+        # Delete each file and folder that is not in the exclude_ids list
+        for file in files:
+            if file['id'] not in exclude_ids:
+                drive_service.files().delete(fileId=file['id']).execute()
+
+        return {"message": "All files and folders except those in the exclude list have been deleted."}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
