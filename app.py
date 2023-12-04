@@ -247,7 +247,8 @@ async def share_file_endpoint(request_data: ShareFileRequest):
     permission = {
         'type': 'user',
         'role': role,
-        'emailAddress': permission_email
+        'emailAddress': permission_email,
+        'sendNotificationEmails': False
     }
     
     try:
@@ -274,7 +275,8 @@ async def share_folder_endpoint(request_data: ShareFolderRequest):
     permission = {
         'type': 'user',
         'role': role,
-        'emailAddress': permission_email
+        'emailAddress': permission_email,
+        'sendNotificationEmails': False
     }
     
     try:
@@ -319,7 +321,8 @@ async def update_permission_role_endpoint(request_data: UpdatePermissionRoleRequ
             permission = {
                 'type': 'user',
                 'role': new_role,
-                'emailAddress': permission_email
+                'emailAddress': permission_email,
+                'sendNotificationEmails': False
             }
             # Create a new permission with the requested role
             drive_service.permissions().create(fileId=file_id, body=permission).execute()
