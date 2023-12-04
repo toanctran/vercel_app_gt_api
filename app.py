@@ -25,6 +25,7 @@ async def root():
   return{"message":"Created by Tran Chi Toan - chitoantran@gmail.com"}
 
 
+
 class CreateGoogleSheetRequest(BaseModel):
     new_spreadsheet_title: str
     permissions_email: str
@@ -50,6 +51,7 @@ def create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permission
         'type': 'user',
         'role': 'writer',
         'emailAddress': permissions_email,
+        'sendNotificationEmails': False
     }
 
     # Add permissions to the copied spreadsheet
