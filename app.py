@@ -23,8 +23,6 @@ app = FastAPI()
 async def root():
   return{"message":"Created by Tran Chi Toan - chitoantran@gmail.com"}
 
-
-
 class CreateGoogleSheetRequest(BaseModel):
     new_spreadsheet_title: str
     permissions_email: str
@@ -173,6 +171,21 @@ def list_files_in_folder(folder_id):
 @app.get("/list_files_in_folder/{folder_id}", response_model=List[dict])
 def list_files_in_folder_endpoint(folder_id: str):
     files = list_files_in_folder(folder_id)
+    if not files:
+        raise HTTPException(status_code=404, detail="Folder not found or empty")
+    return files
+
+# Function to list files in a folder_id and retrieve their details
+def list_folders_in_folder(folder_id):
+    query = f"'{folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder'"
+    results = drive_service.files().list(q=query, fields='files(id, name, createdTime)').execute()
+    files = results.get('files', [])
+    return files
+
+# Endpoint to list files in a specific folder_id
+@app.get("/list_folders_in_folder/{folder_id}", response_model=List[dict])
+def list_files_in_folder_endpoint(folder_id: str):
+    files = list_folders_in_folder(folder_id)
     if not files:
         raise HTTPException(status_code=404, detail="Folder not found or empty")
     return files
@@ -439,6 +452,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
 # Define the data model for Spreadsheet Cell Update
 class SpreadsheetCellUpdate(BaseModel):
     spreadsheet_id: str 
@@ -476,19 +490,20 @@ async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
     except Exception as e:
         return {"error": str(e)}
     
-@app.delete("/delete_all_files")
-async def delete_all_files_endpoint(exclude_ids: list = Query(None)):
-    try:
-        # List all files in Google Drive
-        results = drive_service.files().list(fields="files(id)").execute()
-        files = results.get('files', [])
+# @app.delete("/delete_all_files")
+# async def delete_all_files_endpoint(exclude_ids: list = Query(None)):
+#     try:
+#         # List all files in Google Drive
+#         results = drive_service.files().list(fields="files(id)").execute()
+#         files = results.get('files', [])
 
-        # Delete each file and folder that is not in the exclude_ids list
-        for file in files:
-            if file['id'] not in exclude_ids:
-                drive_service.files().delete(fileId=file['id']).execute()
+#         # Delete each file and folder that is not in the exclude_ids list
+#         for file in files:
+#             if file['id'] not in exclude_ids:
+#                 drive_service.files().delete(fileId=file['id']).execute()
 
-        return {"message": "All files and folders except those in the exclude list have been deleted."}
+#         return {"message": "All files and folders except those in the exclude list have been deleted."}
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+    
