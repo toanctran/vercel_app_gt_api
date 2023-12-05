@@ -40,19 +40,19 @@ def create_google_sheet(source_spreadsheet_id, new_spreadsheet_title, permission
         body=copied_spreadsheet
     ).execute()
 
-    # Get the file ID of the copied spreadsheet
+    # # Get the file ID of the copied spreadsheet
     new_spreadsheet_id = new_spreadsheet['id']
 
-    # Define permissions for write access to the specified email address
-    permissions = {
-        'type': 'user',
-        'role': 'writer',
-        'emailAddress': permissions_email,
-        'sendNotificationEmails': False
-    }
+    # # Define permissions for write access to the specified email address
+    # permissions = {
+    #     'type': 'user',
+    #     'role': 'writer',
+    #     'emailAddress': permissions_email,
+    #     'sendNotificationEmails': False
+    # }
 
-    # Add permissions to the copied spreadsheet
-    drive_service.permissions().create(fileId=new_spreadsheet_id, body=permissions).execute()
+    # # Add permissions to the copied spreadsheet
+    # drive_service.permissions().create(fileId=new_spreadsheet_id, body=permissions, sendNotificationEmails = False,  fields='id').execute()
 
     # Get the web view link for the copied spreadsheet
     web_view_link = f'https://docs.google.com/spreadsheets/d/{new_spreadsheet_id}'
@@ -267,7 +267,7 @@ async def share_file_endpoint(request_data: ShareFileRequest):
     
     try:
         # Share the folder with the specified email address
-        drive_service.permissions().create(fileId=file_id, body=permission).execute()
+        drive_service.permissions().create(fileId=file_id, body=permission, sendNotificationEmails=False).execute()
         return {"message": f"File {file_id} shared with {permission_email} as a {role}."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -295,7 +295,7 @@ async def share_folder_endpoint(request_data: ShareFolderRequest):
     
     try:
         # Share the folder with the specified email address
-        drive_service.permissions().create(fileId=folder_id, body=permission).execute()
+        drive_service.permissions().create(fileId=folder_id, body=permission, sendNotificationEmails=False).execute()
         return {"message": f"Folder {folder_id} shared with {permission_email} as a {role}."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -328,7 +328,7 @@ async def update_permission_role_endpoint(request_data: UpdatePermissionRoleRequ
         if target_permission:
             # Update the role for the existing permission
             target_permission['role'] = new_role
-            drive_service.permissions().update(fileId=file_id, permissionId=target_permission['id'], body=target_permission).execute()
+            drive_service.permissions().update(fileId=file_id, permissionId=target_permission['id'], body=target_permission, sendNotificationEmails=False).execute()
             return {"message": f"Permission role for {permission_email} on file {file_id} updated to {new_role}."}
         else:
              # Define the permission
@@ -339,7 +339,7 @@ async def update_permission_role_endpoint(request_data: UpdatePermissionRoleRequ
                 'sendNotificationEmails': False
             }
             # Create a new permission with the requested role
-            drive_service.permissions().create(fileId=file_id, body=permission).execute()
+            drive_service.permissions().create(fileId=file_id, body=permission, sendNotificationEmails=False).execute()
             return {"message": f"Created permission for {permission_email} on file {file_id} with role {new_role}."}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
