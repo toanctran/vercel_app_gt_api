@@ -388,12 +388,15 @@ class ContentPlanRowData(BaseModel):
     cta: str
 
 # Function to find the first empty row in columns C to G starting from row 6
-def find_empty_row_for_content_plan(spreadsheet_id, sheet_name):
+def find_empty_row_for_content_plan(spreadsheet_id, sheet_name, row):
     values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!B2:J").execute()
     data = values.get("values", [])
-    for i, row in enumerate(data):
-        if all(cell == "" for cell in row):
-            return i + 2  # Return the row number (6-based index)
+    if data:
+        for i, row in enumerate(data):
+            if all(cell == "" for cell in row):
+                return i + 2  # Return the row number (2-based index)
+    else:
+        return 2
     return None
 
 # Endpoint for adding new content plan row
