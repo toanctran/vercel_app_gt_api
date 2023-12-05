@@ -378,8 +378,7 @@ def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
 class ContentPlanRowData(BaseModel):
     spreadsheet_id: str
     sheet_name: str
-    channel: str
-    channel_bio_link: str
+    video_number: str
     content_pillar: str
     video_title: str
     video_summary: str
@@ -387,6 +386,7 @@ class ContentPlanRowData(BaseModel):
     video_description: str
     tags: str
     hashtags: str
+    cta: str
 
 # Function to find the first empty row in columns C to G starting from row 6
 def find_empty_row_for_content_plan(spreadsheet_id, sheet_name):
