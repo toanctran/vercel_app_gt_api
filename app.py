@@ -14,7 +14,6 @@ import json
 SERVICE_ACCOUNT_JSON_PATH = json.loads(os.getenv("GOOGLE_SHEETS_JSON_KEY_CONTENTS"))
 
 creds = service_account.Credentials.from_service_account_info(SERVICE_ACCOUNT_JSON_PATH, scopes=['https://www.googleapis.com/auth/drive'])
-gc = gspread.authorize(creds)
 drive_service = build('drive', 'v3', credentials=creds)
 spreadsheet_service = build('sheets', 'v4', credentials=creds)
 
