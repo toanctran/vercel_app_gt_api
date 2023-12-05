@@ -390,11 +390,11 @@ class ContentPlanRowData(BaseModel):
 
 # Function to find the first empty row in columns C to G starting from row 6
 def find_empty_row_for_content_plan(spreadsheet_id, sheet_name):
-    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!C6:K").execute()
+    values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!B2:J").execute()
     data = values.get("values", [])
     for i, row in enumerate(data):
         if all(cell == "" for cell in row):
-            return i + 6  # Return the row number (6-based index)
+            return i + 2  # Return the row number (6-based index)
     return None
 
 # Endpoint for adding new content plan row
@@ -405,15 +405,15 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
     sheet_name = request_body.sheet_name # Replace with your Google Sheet ID
 
     # Prepare the data for the new row
-    new_row_data = [[request_body.channel, request_body.channel_bio_link, request_body.content_pillar, request_body.video_title, request_body.video_summary, request_body.keywords ,request_body.video_description, request_body.tags, request_body.hashtags]]
+    new_row_data = [[request_body.video_number, request_body.content_pillar, request_body.video_title, request_body.video_summary, request_body.keywords ,request_body.video_description, request_body.tags, request_body.hashtags, request_body.cta]]
 
     try:
-        # Find the first empty row in columns C to E starting from row 6
+        # Find the first empty row in columns B to J starting from row 2
         empty_row = find_empty_row_for_content_plan(spreadsheet_id,sheet_name)
 
         if empty_row is not None:
             # If an empty row is found, update it
-            range_name = f"{sheet_name}!C{empty_row}:K{empty_row}"
+            range_name = f"{sheet_name}!B{empty_row}:J{empty_row}"
         else:
             # If no empty row is found, add a new row
             empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
