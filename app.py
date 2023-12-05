@@ -416,7 +416,7 @@ async def add_content_plan_row_endpoint(request_body: ContentPlanRowData):
         else:
             # If no empty row is found, add a new row
             empty_row = len(spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=sheet_name).execute().get("values", [])) + 1
-            range_name = f"{sheet_name}!C{empty_row}:K{empty_row}"
+            range_name = f"{sheet_name}!B{empty_row}:J{empty_row}"
 
         # Prepare the request body to add a new row or update the existing row
         request_body = {
