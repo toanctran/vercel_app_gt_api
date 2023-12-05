@@ -388,7 +388,7 @@ class ContentPlanRowData(BaseModel):
     cta: str
 
 # Function to find the first empty row in columns C to G starting from row 6
-def find_empty_row_for_content_plan(spreadsheet_id, sheet_name, row):
+def find_empty_row_for_content_plan(spreadsheet_id, sheet_name):
     values = spreadsheet_service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!B2:J").execute()
     data = values.get("values", [])
     if data:
