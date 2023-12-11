@@ -506,4 +506,33 @@ async def update_spreadsheet_cell_endpoint(request_data: SpreadsheetCellUpdate):
 
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=str(e))
+
+# Define the Pydantic model for the request body
+class SpreadsheetRequest(BaseModel):
+    spreadsheet_id: str
+    sheet_name: str
+    row: int
+    column_letter: str
+
+# Function to check an empty cell
+def is_cell_empty(spreadsheet_id: str, sheet_name: str, row: int, column_letter: str) -> bool:
+
+    sheet = spreadsheet_service.spreadsheets()
+    
+    # Convert row and column to A1 notation
+    # column_letter = chr(64 + column)
+    range = f'{sheet_name}!{column_letter}{row}'
+
+    # Get the cell value
+    result = sheet.values().get(spreadsheetId=spreadsheet_id, range=range).execute()
+    values = result.get('values', [])
+
+    # Check if the cell is empty
+    return not values or not values[0]
+
+# FastAPI endpoint
+@app.post("/check_empty_cell")
+def check_empty_cell_endpoint(request: SpreadsheetRequest):
+    empty = is_cell_empty(request.spreadsheet_id, request.sheet_name, request.row, request.column_letter)
+    return {"empty": empty}
     
