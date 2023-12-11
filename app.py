@@ -535,4 +535,22 @@ def is_cell_empty(spreadsheet_id: str, sheet_name: str, row: int, column_letter:
 def check_empty_cell_endpoint(request: SpreadsheetRequest):
     empty = is_cell_empty(request.spreadsheet_id, request.sheet_name, request.row, request.column_letter)
     return {"empty": empty}
+
+@app.get("/get_spreadsheet_name/")
+async def get_spreadsheet_name_endpoint(spreadsheet_url: str):
+    import re
+    # Extract the file ID from the URL
+    match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", spreadsheet_url)
+    if not match:
+        raise HTTPException(status_code=400, detail="Invalid Spreadsheet URL")
+
+    file_id = match.group(1)
+
+    # Use Google Drive API to get file details
+    
+    try:
+        file = drive_service.files().get(fileId=file_id).execute()
+        return {"file_name": file['name']}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
