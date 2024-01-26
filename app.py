@@ -361,6 +361,38 @@ def get_sheet_names_endpoint(request_body: GetSheetNamesRequest):
     except Exception as e:
         return {"error": str(e)}
     
+#Create new Sheet
+class AddNewSheetRequest(BaseModel):
+    spreadsheet_id: str
+    sheet_name: str
+
+@app.post("/add_new_sheet")
+def add_new_sheet(request_body: AddNewSheetRequest):
+    spreadsheet_id = request_body.spreadsheet_id
+    sheet_name = request_body.sheet_name
+
+    batch_update_spreadsheet_request_body = {
+        "requests": [
+            {
+                "addSheet": {
+                    "properties": {
+                        "title": sheet_name
+                    }
+                }
+            }
+        ]
+    }
+
+    try:
+        spreadsheet_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id, 
+            body=batch_update_spreadsheet_request_body
+        ).execute()
+
+        return {"message": f"Sheet '{sheet_name}' added successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
 # Pydantic model for get sheet rows data in spreadsheet request
 class ReadWorksheetDataRequest(BaseModel):
     spreadsheet_id: str
@@ -384,6 +416,7 @@ def read_worksheet_row_endpoint(request_body: ReadWorksheetDataRequest):
             return rows
     except Exception as e:
         return {"error": str(e)}
+    
 
 
 # Pydantic model for update content plan ro
